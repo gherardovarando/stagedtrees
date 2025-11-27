@@ -76,9 +76,9 @@ stages_hclust <-
       ))
     }
     if (!requireNamespace("fastcluster", quietly = TRUE)) {
-      hclu <- fastcluster::hclust
-    }else{
       hclu <- hclust
+    }else{
+      hclu <- fastcluster::hclust
     }
     if (is.null(scope)) scope <- sevt_varnames(object)[2:limit]
     check_scope(scope, object)
