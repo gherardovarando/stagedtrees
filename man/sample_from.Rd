@@ -26,6 +26,15 @@ in a staged event tree object.
 \details{
 It samples \code{size} observations according to
 the transition probabilities (\code{object$prob}) in the model.
+
+Observations sitting in the same stage are drawn in a single call, rather
+than one call per observation. This changed in version 3.0.0 and with it
+the sequence of random numbers consumed: the distribution sampled is
+unchanged, but a given \code{seed} no longer reproduces the values it
+produced in earlier versions. Code that stored a sample from a fixed seed
+and compares against it will see a difference. There is no option to
+restore the previous sequence; install an earlier version of the package
+if the exact values matter.
 }
 \examples{
 model <- stages_fbhc(full(PhDArticles, lambda = 1))

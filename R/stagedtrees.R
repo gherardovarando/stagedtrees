@@ -74,4 +74,7 @@
 #' mf <- full(PhDArticles, join_unobserved = TRUE)
 #' mod <- stages_fbhc(mf)
 #' plot(mod)
+#'
+#' @useDynLib stagedtrees, .registration = TRUE
+#' @importFrom Rcpp sourceCpp
 "_PACKAGE"
