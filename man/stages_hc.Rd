@@ -12,6 +12,7 @@ stages_hc(
   max_iter = Inf,
   scope = NULL,
   ignore = object$name_unobserved,
+  separate = NULL,
   trace = 0
 )
 }
@@ -28,6 +29,11 @@ data, as returned by \code{full} or \code{sevt_fit}.}
 \item{ignore}{vector of stages which will be ignored and left untouched,
 by default the name of the unobserved stages stored in
 \code{object$name_unobserved}.}
+
+\item{separate}{name of a treatment variable, or \code{NULL}. When given,
+the search never puts two situations which differ only in
+the value of that variable in the same stage, for every
+variable of \code{scope} which follows it.}
 
 \item{trace}{if >0 increasingly amount of info
 is printed (via \code{message}).}
@@ -49,6 +55,16 @@ The \code{ignore} argument can be used to specify stages that should not
 be affected during the search, that is left untouched.
 This is useful for preserving structural zeroes and to speed-up
 computations.
+
+The \code{separate} argument constrains the search rather than repairing it
+afterwards. Two situations which differ only in the value taken by the
+variable it names describe the same history under two treatments, and a
+stage holding both states that the treatment has no effect in that
+context, whatever the data says; see \code{\link[=arm_separation]{arm_separation()}}. With \code{separate}
+the search never proposes such a merge, so the result maximizes the score
+among the stagings which keep the arms apart. The starting model must
+already keep them apart, which a model returned by \code{\link[=full]{full()}} does, and
+\code{\link[=separate_arms]{separate_arms()}} makes any other one do.
 
 Candidate moves are ranked by log-likelihood alone, which is done in
 compiled code, and \code{score} is then evaluated only on the best candidate of

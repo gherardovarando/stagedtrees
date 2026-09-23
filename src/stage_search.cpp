@@ -101,10 +101,31 @@ NumericVector best_merge_cpp(NumericMatrix pm, NumericVector nvec,
 //   situation (1-based), target stage (1-based, or 0 meaning "a new stage"),
 //   dll, ddf
 //
+// `ctx` gives a group for each situation, and a move into a stage already
+// holding another situation of the same group is not considered. It is how
+// the arms of a treatment are kept apart: two situations which differ only in
+// the treatment share a group, and a stage holding both would state that the
+// treatment has no effect there. An empty `ctx` leaves the search unconstrained.
+//
 // [[Rcpp::export]]
 NumericMatrix best_move_cpp(NumericMatrix ct, IntegerVector asg,
-                            int nstage, double lambda) {
+                            int nstage, double lambda,
+                            IntegerVector ctx = IntegerVector::create()) {
   int nsit = ct.nrow(), k = ct.ncol();
+  bool constrained = ctx.size() > 0;
+  if (constrained && ctx.size() != nsit)
+    stop("ctx must give a group for each situation");
+  int nctx = 0;
+  for (int s = 0; s < nsit; s++) if (constrained && ctx[s] + 1 > nctx) nctx = ctx[s] + 1;
+  // how many situations of each group each stage already holds
+  std::vector<int> occ(constrained ? (size_t)nstage * nctx : 0, 0);
+  if (constrained) {
+    for (int s = 0; s < nsit; s++) {
+      int a = asg[s];
+      if (a < 0) continue;
+      occ[(size_t)a * nctx + ctx[s]]++;
+    }
+  }
   NumericMatrix tot(nstage, k);
   std::vector<int> cnt(nstage, 0);
   for (int s = 0; s < nsit; s++) {
@@ -149,6 +170,8 @@ NumericMatrix best_move_cpp(NumericMatrix ct, IntegerVector asg,
       : delta_stage(&srcOld[0], den[a], &srcNew[0], k);
     for (int b = 0; b < nstage; b++) {
       if (b == a) continue;
+      // s would join a situation it must stay apart from
+      if (constrained && occ[(size_t)b * nctx + ctx[s]] > 0) continue;
       for (int l = 0; l < k; l++) {
         dstOld[l] = tot(b, l);
         dstNew[l] = tot(b, l) + ct(s, l);

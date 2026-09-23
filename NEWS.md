@@ -1,5 +1,12 @@
 # dev
 
+* `stages_hc` earns a `separate` argument, naming a treatment variable. The
+   search then never puts two situations which differ only in the value of
+   that variable in one stage, so it maximizes the score among the stagings
+   which keep the treatment arms apart, rather than being repaired
+   afterwards by `separate_arms`. The starting model must already keep them
+   apart, which a model returned by `full` does.
+
 * new functions `arm_separation` and `separate_arms`. Two situations of an
    outcome which differ only in the value taken by the treatment describe
    the same history under two treatments, so a stage holding both states

@@ -11,6 +11,10 @@
 #' @param ignore vector of stages which will be ignored and left untouched,
 #'               by default the name of the unobserved stages stored in
 #'               `object$name_unobserved`.
+#' @param separate name of a treatment variable, or \code{NULL}. When given,
+#'                  the search never puts two situations which differ only in
+#'                  the value of that variable in the same stage, for every
+#'                  variable of \code{scope} which follows it.
 #' @param trace if >0 increasingly amount of info
 #' is printed (via \code{message}).
 #'
@@ -23,6 +27,16 @@
 #' be affected during the search, that is left untouched.
 #' This is useful for preserving structural zeroes and to speed-up
 #' computations.
+#'
+#' The `separate` argument constrains the search rather than repairing it
+#' afterwards. Two situations which differ only in the value taken by the
+#' variable it names describe the same history under two treatments, and a
+#' stage holding both states that the treatment has no effect in that
+#' context, whatever the data says; see [arm_separation()]. With `separate`
+#' the search never proposes such a merge, so the result maximizes the score
+#' among the stagings which keep the arms apart. The starting model must
+#' already keep them apart, which a model returned by [full()] does, and
+#' [separate_arms()] makes any other one do.
 #'
 #' Candidate moves are ranked by log-likelihood alone, which is done in
 #' compiled code, and `score` is then evaluated only on the best candidate of
@@ -50,12 +64,31 @@ stages_hc <- function(object,
                       max_iter = Inf,
                       scope = NULL,
                       ignore = object$name_unobserved,
+                      separate = NULL,
                       trace = 0) {
   check_sevt_fit(object)
   if (is.null(scope)) {
     scope <- sevt_varnames(object)[-1]
   }
   check_scope(scope, object)
+  if (!is.null(separate)) {
+    check_scope(separate, object)
+    bad <- vapply(scope, function(v) {
+      if (which(sevt_varnames(object) == v) <=
+          which(sevt_varnames(object) == separate)) {
+        return(FALSE)
+      }
+      nrow(arm_separation(object, separate, v, ignore = ignore)) > 0
+    }, TRUE)
+    if (any(bad)) {
+      cli::cli_abort(c(
+        "{.arg object} must already keep the arms of {.val {separate}} apart.",
+        "x" = "The staging of {.val {names(which(bad))}} puts two situations
+               which differ only in {.val {separate}} in one stage.",
+        "i" = "Use {.fun stagedtrees::separate_arms} on {.arg object} first."
+      ))
+    }
+  }
   now_score <- score(object)
   for (v in scope) {
     done <- FALSE
@@ -79,7 +112,15 @@ stages_hc <- function(object,
       storage.mode(ct) <- "double"
       asg <- match(stages, ustages) - 1L
       asg[is.na(asg)] <- -1L
-      cand <- best_move_cpp(ct, as.integer(asg), length(ustages), lambda)
+      ctxv <- if (!is.null(separate) &&
+                  which(sevt_varnames(object) == v) >
+                  which(sevt_varnames(object) == separate)) {
+        cc <- arm_index(object, separate, v)$context
+        as.integer(match(cc, unique(cc)) - 1L)
+      } else {
+        integer(0)
+      }
+      cand <- best_move_cpp(ct, as.integer(asg), length(ustages), lambda, ctxv)
       ## every representative is scored against the UNMODIFIED object and only
       ## the best is applied; the candidate indices refer to the current stage
       ## structure and are stale the moment a move is taken

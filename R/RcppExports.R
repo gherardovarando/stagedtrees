@@ -25,7 +25,7 @@ best_merge_cpp <- function(pm, nvec, lambda, k) {
     .Call(`_stagedtrees_best_merge_cpp`, pm, nvec, lambda, k)
 }
 
-best_move_cpp <- function(ct, asg, nstage, lambda) {
-    .Call(`_stagedtrees_best_move_cpp`, ct, asg, nstage, lambda)
+best_move_cpp <- function(ct, asg, nstage, lambda, ctx = as.integer( c())) {
+    .Call(`_stagedtrees_best_move_cpp`, ct, asg, nstage, lambda, ctx)
 }
 
